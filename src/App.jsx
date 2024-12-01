@@ -1,25 +1,15 @@
 import { useEffect } from "react";
 
 function App() {
-  // useEffect(() => {
-  // Define the async function inside useEffect
-  const example = async () => {
-    // Query the active tab
-    let [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-
-    // Execute the script to change background color
+  const onclick = async () => {
+    let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      func: () => {
-        document.body.style.backgroundColor = "green";
+      function: () => {
+        alert("Hello from the page");
       },
     });
   };
-
-  example();
 
   return (
     <>
