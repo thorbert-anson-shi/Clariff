@@ -1,4 +1,26 @@
+import { useEffect } from "react";
+
 function App() {
+  // useEffect(() => {
+  // Define the async function inside useEffect
+  const example = async () => {
+    // Query the active tab
+    let [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+
+    // Execute the script to change background color
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        document.body.style.backgroundColor = "green";
+      },
+    });
+  };
+
+  example();
+
   return (
     <>
       <div className="flex flex-col justify-center items-center space-y-5">
