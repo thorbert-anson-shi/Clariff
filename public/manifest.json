@@ -1,13 +1,18 @@
 {
   "manifest_version": 3,
-  "name": "Clariff",
+  "name": "Clariff Extension",
   "version": "1.0",
-  "description": "A Chrome extension named Clariff.",
-  "permissions": ["scripting"],
+  "permissions": ["scripting", "activeTab", "storage"],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html"
-  }
+    "default_popup": "index.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-script.js"]
+    }
+  ]
 }
