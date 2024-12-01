@@ -2,26 +2,9 @@
   "manifest_version": 3,
   "name": "Clariff Extension",
   "version": "1.0",
-<<<<<<< HEAD
-  "permissions": ["scripting", "activeTab", "storage"],
-=======
   "description": "An extension that rearticulates information to help you understand better, faster.",
   "permissions": ["scripting"],
->>>>>>> cebeb866f08b589f4394ceef16b735693f9fa168
-  "background": {
-    "service_worker": "background.js"
-  },
   "action": {
     "default_popup": "index.html"
-<<<<<<< HEAD
-  },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content-script.js"]
-    }
-  ]
-=======
   }
->>>>>>> cebeb866f08b589f4394ceef16b735693f9fa168
 }
