@@ -3,11 +3,18 @@
   "name": "Clariff",
   "version": "1.0",
   "description": "An extension that rearticulates information to help you understand better, faster.",
-  "permissions": ["scripting"],
+  "permissions": ["scripting", "activeTab"],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
     "default_popup": "index.html"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "host_permissions": ["http://*/*", "https://*/*"]
 }
