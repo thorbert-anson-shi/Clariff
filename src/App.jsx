@@ -1,5 +1,3 @@
-import "./App.css";
-
 function App() {
   const onclick = async () => {
     let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
