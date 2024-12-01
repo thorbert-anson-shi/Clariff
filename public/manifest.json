@@ -2,12 +2,12 @@
   "manifest_version": 3,
   "name": "Clariff",
   "version": "1.0",
-  "description": "A Chrome extension named Clariff.",
+  "description": "An extension that rearticulates information to help you understand better, faster.",
   "permissions": ["scripting"],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "index.html"
   }
 }
