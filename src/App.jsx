@@ -23,7 +23,7 @@ function App() {
     // Execute the script to add the text selection listener
     chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      func: addTextSelectionListener, // Inject the function
+      // func: addTextSelectionListener, // Inject the function
     });
   };
 
