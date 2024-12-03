@@ -1,17 +1,7 @@
 function App() {
-  const onclick = async () => {
-    let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      function: () => {
-        alert("Hello from the page");
-      },
-    });
-  };
-
   return (
     <>
-      <div className="flex flex-col justify-center items-center p-5 space-y-5 rounded-lg">
+      <div className="flex flex-col justify-center items-center space-y-5">
         <h1 className="text-2xl font-thin">Clariff</h1>
         <p className="font-medium">
           An extension that rearticulates information to help you understand
