@@ -78,10 +78,29 @@ function App() {
             }
 
             try {
-              const result = await summarizer.summarize(selectedText);
-              console.log(result);
+              // Create the streaming div directly
+              const streamDiv = document.createElement("div");
+              streamDiv.id = "streaming-box";
+              streamDiv.style.position = "fixed";
+              streamDiv.style.bottom = "20px";
+              streamDiv.style.right = "20px";
+              streamDiv.style.width = "300px";
+              streamDiv.style.maxHeight = "200px";
+              streamDiv.style.overflowY = "auto";
+              streamDiv.style.padding = "10px";
+              streamDiv.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+              streamDiv.style.color = "white";
+              streamDiv.style.borderRadius = "5px";
+              streamDiv.style.zIndex = "1000";
+              streamDiv.style.fontFamily = "Arial, sans-serif";
+              streamDiv.style.fontSize = "14px";
+              document.body.appendChild(streamDiv);
 
-              alert("Summarized text: " + result);
+              // Start streaming the summary
+              const stream = summarizer.summarizeStreaming(selectedText);
+              for await (const chunk of stream) {
+                streamDiv.textContent += chunk;
+              }
             } catch (error) {
               console.error("Error summarizing text:", error);
               alert("Failed to summarize text.");
@@ -116,7 +135,7 @@ function App() {
   // addTextSelectionListener();
   return (
     <>
-      <div className="flex flex-col justify-center items-center space-y-5">
+      <div className="flex flex-col items-center justify-center space-y-5">
         <h1 className="text-2xl font-thin">Clariff</h1>
         <p className="font-medium">
           An extension that rearticulates information to help you understand
@@ -124,7 +143,7 @@ function App() {
         </p>
         <button
           onClick={startProgram}
-          className="px-3 py-2 drop-shadow-md rounded-lg bg-slate-200 hover:bg-slate-300 hover:drop-shadow-none"
+          className="px-3 py-2 rounded-lg drop-shadow-md bg-slate-200 hover:bg-slate-300 hover:drop-shadow-none"
         >
           Activate
         </button>
