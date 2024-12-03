@@ -17,5 +17,11 @@
       "css": ["content.css"]
     }
   ],
+  "web_accessible_resources": [
+    {
+      "matches": ["<all_urls>"],
+      "resources": ["assets/xmark-solid.svg"]
+    }
+  ],
   "host_permissions": ["http://*/*", "https://*/*"]
 }
