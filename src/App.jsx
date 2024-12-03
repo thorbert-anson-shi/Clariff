@@ -11,7 +11,7 @@ function App() {
 
   return (
     <>
-      <div className="flex flex-col justify-center items-center space-y-5">
+      <div className="flex flex-col justify-center items-center p-5 space-y-5 rounded-lg">
         <h1 className="text-2xl font-thin">Clariff</h1>
         <p className="font-medium">
           An extension that rearticulates information to help you understand
