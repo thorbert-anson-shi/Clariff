@@ -1,3 +1,112 @@
+// This function will be injected into the page context
+const addTextSelectionListener = () => {
+  document.addEventListener("mouseup", () => {
+    const selectedText = window.getSelection().toString().trim(); // Get the selected text
+
+    if (selectedText) {
+      // Get the position of the selection
+      const selection = window.getSelection();
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect(); // Get the bounding rectangle of the selection
+
+      const analyzeButton = document.createElement("button");
+      analyzeButton.textContent = "Analyze";
+      analyzeButton.style.position = "absolute";
+      analyzeButton.style.top = `${rect.top + window.scrollY - 40}px`;
+      analyzeButton.style.left = `${rect.left + window.scrollX}px`; // Align with the selection
+      analyzeButton.style.zIndex = "9999";
+      analyzeButton.style.padding = "8px 16px";
+      analyzeButton.style.backgroundColor = "#007bff";
+      analyzeButton.style.color = "white";
+      analyzeButton.style.border = "none";
+      analyzeButton.style.borderRadius = "5px";
+      analyzeButton.style.cursor = "pointer";
+      analyzeButton.style.fontSize = "14px";
+
+      // Add event listener to the "Analyze" button
+      analyzeButton.addEventListener("click", () => {
+        (async () => {
+          const canSummarize = await ai.summarizer.capabilities();
+          let summarizer;
+          if (canSummarize && canSummarize.available !== "no") {
+            if (canSummarize.available === "readily") {
+              // The summarizer can immediately be used.
+              summarizer = await ai.summarizer.create();
+            } else {
+              // The summarizer can be used after the model download.
+              summarizer = await ai.summarizer.create();
+              summarizer.addEventListener("downloadprogress", (e) => {
+                console.log(e.loaded, e.total);
+              });
+              await summarizer.ready;
+            }
+          } else {
+            alert("total fail");
+            return;
+          }
+
+          try {
+            // Create the streaming div directly
+            const streamDiv = document.createElement("div");
+            streamDiv.id = "streaming-box";
+            streamDiv.style.position = "fixed";
+            streamDiv.style.bottom = "20px";
+            streamDiv.style.right = "20px";
+            streamDiv.style.width = "300px";
+            streamDiv.style.maxHeight = "200px";
+            streamDiv.style.overflowY = "auto";
+            streamDiv.style.padding = "10px";
+            streamDiv.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+            streamDiv.style.color = "white";
+            streamDiv.style.borderRadius = "5px";
+            streamDiv.style.zIndex = "1000";
+            streamDiv.style.fontFamily = "Arial, sans-serif";
+            streamDiv.style.fontSize = "14px";
+            document.body.appendChild(streamDiv);
+
+            // Initialize an empty string to track the last processed content
+            let lastContent = "";
+
+            // Start streaming the summary
+            const stream = summarizer.summarizeStreaming(selectedText);
+            for await (const chunk of stream) {
+              // Add only the new part of the chunk
+              const newContent = chunk.replace(lastContent, "");
+              streamDiv.textContent += newContent;
+              lastContent = chunk; // Update the last processed content
+            }
+          } catch (error) {
+            console.error("Error summarizing text:", error);
+            alert("Failed to summarize text.");
+          }
+
+          summarizer.destroy();
+        })();
+      });
+
+      // Append the button to the body
+      document.body.appendChild(analyzeButton);
+
+      // Check if the button is outside the viewport
+      const buttonRect = analyzeButton.getBoundingClientRect();
+      const isOutOfView = buttonRect.top < 0;
+
+      // Adjust position if it's out of view
+      if (isOutOfView) {
+        analyzeButton.style.top = `${rect.bottom + window.scrollY + 10}px`;
+      }
+
+      // Remove the button if the selection changes (user clicks elsewhere)
+      const removeButton = () => {
+        analyzeButton.remove();
+        document.removeEventListener("selectionchange", removeButton);
+      };
+      document.addEventListener("selectionchange", removeButton); // Event to remove the button when selection changes
+    }
+  });
+};
+
+addTextSelectionListener();
 // Container to hold card and minimized button
 const clariffContainer = document.createElement("div");
 clariffContainer.id = "clariff-container";
