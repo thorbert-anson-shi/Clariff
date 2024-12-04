@@ -53,9 +53,6 @@ function App() {
           <option value="ru">Russian (ru)</option>
           <option value="es">Spanish (es)</option>
           <option value="tr">Turkish (tr)</option>
-          <option value="hi">Hindi (hi)</option>
-          <option value="vi">Vietnamese (vi)</option>
-          <option value="bn">Bengali (bn)</option>
         </select>
       </div>
     </>

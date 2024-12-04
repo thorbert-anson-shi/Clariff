@@ -7,9 +7,6 @@ const supportedLanguages = [
   "ru",
   "es",
   "tr",
-  "hi",
-  "vi",
-  "bn",
 ];
 
 let preferredLang;
@@ -118,16 +115,20 @@ const addTextSelectionListener = () => {
             console.log("detect: " + detectedLanguage);
             console.log("preferred: " + preferredLang);
 
-            const translator = await ai.translator.create({
-              sourceLanguage: detectedLanguage,
-              targetLanguage: preferredLang,
-            });
-
             if (supportedLanguages.includes(detectedLanguage)) {
               // Translator is created only if the detected language is supported
 
               for await (let chunk of stream) {
-                textOutput = await translator.translate(chunk);
+                try {
+                  const translator = await ai.translator.create({
+                    sourceLanguage: detectedLanguage,
+                    targetLanguage: preferredLang,
+                  });
+                  textOutput = await translator.translate(chunk);
+                } catch {
+                  console.log("Translation to preferred language failed");
+                  textOutput = chunk;
+                }
 
                 // Parse markdown list items beginning with - and *
                 textOutput = textOutput
