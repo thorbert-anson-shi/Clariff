@@ -1,152 +1,62 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 
 function App() {
-  function analyzeFunc(input) {
-    // Assuming ai.summarize.create() returns a promise with the summarized text
-    alert(input);
-    // try {
-    //   const summarizer = await ai.summarize.create({ type: "tl;dr" });
-    //   const res = await summarizer(input);
-    //   alert("Summarized text: " + res);
-    // } catch (error) {
-    //   console.error("Error summarizing text:", error);
-    //   alert("Failed to summarize text.");
-    // }
-  }
+  const [selectedLanguage, setSelectedLanguage] = useState("en"); // Default to 'en' while loading
 
-  const startProgram = async () => {
-    // Query the active tab
+  // Fetch preferred language from Chrome storage on mount
+  useEffect(() => {
+    chrome.storage.sync.get(["preferredLang"], (result) => {
+      if (result.preferredLang) {
+        setSelectedLanguage(result.preferredLang);
+      }
+    });
+  }, []);
+
+  const updateChromeStorage = async (selectedLanguage) => {
     let [tab] = await chrome.tabs.query({
       active: true,
       currentWindow: true,
     });
-
-    // Execute the script to add the text selection listener
     chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      // func: addTextSelectionListener, // Inject the function
-      // args: [analyzeFunc()],
-    });
-  };
-  startProgram();
-
-  // This function will be injected into the page context
-  const addTextSelectionListener = () => {
-    document.addEventListener("mouseup", () => {
-      const selectedText = window.getSelection().toString().trim(); // Get the selected text
-
-      if (selectedText) {
-        // Get the position of the selection
-        const selection = window.getSelection();
-        const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect(); // Get the bounding rectangle of the selection
-
-        const analyzeButton = document.createElement("button");
-        analyzeButton.textContent = "Analyze";
-        analyzeButton.style.position = "absolute";
-        analyzeButton.style.top = `${rect.top + window.scrollY - 40}px`;
-        analyzeButton.style.left = `${rect.left + window.scrollX}px`; // Align with the selection
-        analyzeButton.style.zIndex = "9999";
-        analyzeButton.style.padding = "8px 16px";
-        analyzeButton.style.backgroundColor = "#007bff";
-        analyzeButton.style.color = "white";
-        analyzeButton.style.border = "none";
-        analyzeButton.style.borderRadius = "5px";
-        analyzeButton.style.cursor = "pointer";
-        analyzeButton.style.fontSize = "14px";
-
-        // Add event listener to the "Analyze" button
-        analyzeButton.addEventListener("click", () => {
-          (async () => {
-            const canSummarize = await ai.summarizer.capabilities();
-            let summarizer;
-            if (canSummarize && canSummarize.available !== "no") {
-              if (canSummarize.available === "readily") {
-                // The summarizer can immediately be used.
-                summarizer = await ai.summarizer.create();
-              } else {
-                // The summarizer can be used after the model download.
-                summarizer = await ai.summarizer.create();
-                summarizer.addEventListener("downloadprogress", (e) => {
-                  console.log(e.loaded, e.total);
-                });
-                await summarizer.ready;
-              }
-            } else {
-              alert("total fail");
-              return;
-            }
-
-            try {
-              // Create the streaming div directly
-              const streamDiv = document.createElement("div");
-              streamDiv.id = "streaming-box";
-              streamDiv.style.position = "fixed";
-              streamDiv.style.bottom = "20px";
-              streamDiv.style.right = "20px";
-              streamDiv.style.width = "300px";
-              streamDiv.style.maxHeight = "200px";
-              streamDiv.style.overflowY = "auto";
-              streamDiv.style.padding = "10px";
-              streamDiv.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
-              streamDiv.style.color = "white";
-              streamDiv.style.borderRadius = "5px";
-              streamDiv.style.zIndex = "1000";
-              streamDiv.style.fontFamily = "Arial, sans-serif";
-              streamDiv.style.fontSize = "14px";
-              document.body.appendChild(streamDiv);
-
-              // Start streaming the summary
-              const stream = summarizer.summarizeStreaming(selectedText);
-              for await (const chunk of stream) {
-                streamDiv.textContent += chunk;
-              }
-            } catch (error) {
-              console.error("Error summarizing text:", error);
-              alert("Failed to summarize text.");
-            }
-
-            summarizer.destroy();
-          })();
-        });
-
-        // Append the button to the body
-        document.body.appendChild(analyzeButton);
-
-        // Check if the button is outside the viewport
-        const buttonRect = analyzeButton.getBoundingClientRect();
-        const isOutOfView = buttonRect.top < 0;
-
-        // Adjust position if it's out of view
-        if (isOutOfView) {
-          analyzeButton.style.top = `${rect.bottom + window.scrollY + 10}px`;
-        }
-
-        // Remove the button if the selection changes (user clicks elsewhere)
-        const removeButton = () => {
-          analyzeButton.remove();
-          document.removeEventListener("selectionchange", removeButton);
-        };
-        document.addEventListener("selectionchange", removeButton); // Event to remove the button when selection changes
-      }
+      args: [selectedLanguage],
+      function: (selectedLanguage) => {
+        chrome.storage.sync.set({ preferredLang: selectedLanguage });
+      },
     });
   };
 
-  // addTextSelectionListener();
+  const handleLanguageChange = (event) => {
+    const newLanguage = event.target.value;
+    setSelectedLanguage(newLanguage);
+    updateChromeStorage(newLanguage);
+  };
+
   return (
     <>
-      <div className="flex flex-col items-center justify-center space-y-5">
-        <h1 className="text-2xl font-thin">Clariff</h1>
-        <p className="font-medium">
-          An extension that rearticulates information to help you understand
-          better, faster.
+      <div className="flex flex-col items-center justify-center h-48 p-4 shadow-lg w-80 bg-gradient-to-r from-blue-500 to-indigo-600">
+        <h1 className="text-3xl font-bold tracking-wide text-white">Clariff</h1>
+        <p className="mt-4 text-lg font-light text-center text-white">
+          Rearticulates information to help you understand better, faster.
         </p>
-        <button
-          onClick={startProgram}
-          className="px-3 py-2 rounded-lg drop-shadow-md bg-slate-200 hover:bg-slate-300 hover:drop-shadow-none"
+        {/* Language Selection Dropdown */}
+        <select
+          value={selectedLanguage}
+          onChange={handleLanguageChange}
+          className="px-4 py-2 mt-4 font-semibold text-indigo-600 bg-white rounded-lg hover:bg-gray-100"
         >
-          Activate
-        </button>
+          <option value="en">English (en)</option>
+          <option value="zh">Mandarin Chinese (simplified)</option>
+          <option value="zh-Hant">Mandarin (traditional)</option>
+          <option value="ja">Japanese (ja)</option>
+          <option value="pt">Portuguese (pt)</option>
+          <option value="ru">Russian (ru)</option>
+          <option value="es">Spanish (es)</option>
+          <option value="tr">Turkish (tr)</option>
+          <option value="hi">Hindi (hi)</option>
+          <option value="vi">Vietnamese (vi)</option>
+          <option value="bn">Bengali (bn)</option>
+        </select>
       </div>
     </>
   );

@@ -1,4 +1,38 @@
-// This function will be injected into the page context
+const supportedLanguages = [
+  "en",
+  "zh",
+  "zh-Hant",
+  "ja",
+  "pt",
+  "ru",
+  "es",
+  "tr",
+  "hi",
+  "vi",
+  "bn",
+];
+
+let preferredLang;
+
+async function getPreferredLanguage() {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(["preferredLang"], (result) => {
+      resolve(result.preferredLang || "en");
+    });
+  });
+}
+
+(async () => {
+  preferredLang = await getPreferredLanguage();
+
+  if (supportedLanguages.includes(preferredLang)) {
+    console.log(`Using preferred language: ${preferredLang}`);
+    // Perform translation or related actions here
+  } else {
+    console.log(`Preferred language not supported: ${preferredLang}`);
+  }
+})();
+
 const addTextSelectionListener = () => {
   document.addEventListener("mouseup", () => {
     const selectedText = window.getSelection().toString().trim(); // Get the selected text
@@ -72,25 +106,6 @@ const addTextSelectionListener = () => {
           }
 
           try {
-            // Create the streaming div directly
-            // COMMENTED OUT FOR NOW
-            // const streamDiv = document.createElement("div");
-            // streamDiv.id = "streaming-box";
-            // streamDiv.style.position = "fixed";
-            // streamDiv.style.bottom = "20px";
-            // streamDiv.style.right = "20px";
-            // streamDiv.style.width = "300px";
-            // streamDiv.style.maxHeight = "200px";
-            // streamDiv.style.overflowY = "auto";
-            // streamDiv.style.padding = "10px";
-            // streamDiv.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
-            // streamDiv.style.color = "white";
-            // streamDiv.style.borderRadius = "5px";
-            // streamDiv.style.zIndex = "1000";
-            // streamDiv.style.fontFamily = "Arial, sans-serif";
-            // streamDiv.style.fontSize = "14px";
-            // document.body.appendChild(streamDiv);
-
             const results = await detector.detect(selectedText);
             const detectedLanguage = results[0].detectedLanguage;
             outputFooter.textContent = `Language detected: ${detectedLanguage}`;
@@ -99,16 +114,36 @@ const addTextSelectionListener = () => {
             const stream = summarizer.summarizeStreaming(selectedText);
 
             output.textContent = "Generating response...";
+            preferredLang = await getPreferredLanguage();
+            console.log("detect: " + detectedLanguage);
+            console.log("preferred: " + preferredLang);
 
-            for await (let chunk of stream) {
-              textOutput = chunk;
+            const translator = await ai.translator.create({
+              sourceLanguage: detectedLanguage,
+              targetLanguage: preferredLang,
+            });
 
-              // Parse markdown list items beginning with - and *
-              chunk = chunk
-                .replace(/^[\*\-]{1}\s/g, "<li>")
-                .replace(/(\.[*]*\s)[\s]*[\*\-]{1}/g, "$1</li><li>");
-              output.innerHTML = chunk;
-              // streamDiv.innerHTML = chunk;
+            if (supportedLanguages.includes(detectedLanguage)) {
+              // Translator is created only if the detected language is supported
+
+              for await (let chunk of stream) {
+                textOutput = await translator.translate(chunk);
+
+                // Parse markdown list items beginning with - and *
+                textOutput = textOutput
+                  .replace(/^[\*\-]{1}\s/g, "<li>")
+                  .replace(/(\.[*]*\s)[\s]*[\*\-]{1}/g, "$1</li><li>");
+                output.innerHTML = textOutput;
+              }
+            } else {
+              // If language is not supported, handle the stream without translation
+              for await (let chunk of stream) {
+                // Parse markdown list items beginning with - and *
+                textOutput = chunk
+                  .replace(/^[\*\-]{1}\s/g, "<li>")
+                  .replace(/(\.[*]*\s)[\s]*[\*\-]{1}/g, "$1</li><li>");
+                output.innerHTML = textOutput;
+              }
             }
           } catch (error) {
             console.error("Error summarizing text:", error);
