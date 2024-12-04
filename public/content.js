@@ -237,6 +237,7 @@ outputContainer.appendChild(output);
 const outputFooter = document.createElement("p");
 outputFooter.id = "clariff-language";
 outputFooter.textContent = "Language detected: ";
+outputFooter.textContent = "Preferred language: " + preferredLang;
 outputContainer.appendChild(outputFooter);
 
 const outputFooterPreferred = document.createElement("p");
@@ -343,8 +344,45 @@ buttonGroup.appendChild(rephraseButton);
 let textOutput = "";
 
 rephraseButton.addEventListener("click", async () => {
+  let detector;
+
+  const canDetect = await translation.canDetect();
+  if (canDetect !== "no") {
+    if (canDetect === "readily") {
+      // The language detector can immediately be used.
+      detector = await translation.createDetector();
+    } else {
+      // The language detector can be used after the model download.
+      detector = await translation.createDetector();
+      detector.addEventListener("downloadprogress", (e) => {
+        console.log(e.loaded, e.total);
+      });
+      await detector.ready;
+    }
+  } else {
+    alert("Failed to load language detector");
+    return;
+  }
+
+  let result = await detector.detect(textOutput);
+
+  let detectedLanguage = result[0].detectedLanguage;
+
+  let intermediateString = "";
+  let firstTranslator;
+
+  if (detectedLanguage !== "en") {
+    firstTranslator = await ai.translator.create({
+      sourceLanguage: detectedLanguage,
+      targetLanguage: "en",
+    });
+
+    intermediateString = await firstTranslator.translate(textOutput);
+  } else {
+    intermediateString = textOutput;
+  }
+
   // If user selects to rephrase the length
-  console.log(textOutput);
   if (choiceDropdown.selectedIndex === 0) {
     rephraseLength = secondDropdown.value;
   } else {
@@ -361,16 +399,37 @@ rephraseButton.addEventListener("click", async () => {
 
   output.textContent = "Generating response...";
 
-  const stream = rewriter.rewriteStreaming(textOutput);
+  const stream = rewriter.rewriteStreaming(intermediateString);
 
-  for await (let chunk of stream) {
-    textOutput = chunk;
+  preferredLang = await getPreferredLanguage();
 
-    // Parse list items starting with either - or *
-    chunk = chunk
-      .replace(/^[\*\-]{1}\s/g, "<li>")
-      .replace(/(\.[*]*\s)[\s]*[\*\-]{1}/g, "$1</li><li>");
-    output.innerHTML = chunk;
+  let secondTranslator;
+
+  if (supportedLanguages.includes(preferredLang) && preferredLang !== "en") {
+    secondTranslator = await ai.translator.create({
+      sourceLanguage: "en",
+      targetLanguage: preferredLang,
+    });
+
+    for await (let chunk of stream) {
+      textOutput = await secondTranslator.translate(chunk);
+
+      // Parse list items starting with either - or *
+      textOutput = textOutput
+        .replace(/^[\*\-]{1}\s/g, "<li>")
+        .replace(/(\.[*]*\s)[\s]*[\*\-]{1}/g, "$1</li><li>");
+      output.innerHTML = textOutput;
+    }
+  } else {
+    for await (let chunk of stream) {
+      textOutput = chunk;
+
+      // Parse list items starting with either - or *
+      chunk = chunk
+        .replace(/^[\*\-]{1}\s/g, "<li>")
+        .replace(/(\.[*]*\s)[\s]*[\*\-]{1}/g, "$1</li><li>");
+      output.innerHTML = chunk;
+    }
   }
 
   rewriter.destroy();
