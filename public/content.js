@@ -113,8 +113,6 @@ const addTextSelectionListener = () => {
             const stream = summarizer.summarizeStreaming(selectedText);
 
             output.textContent = "Generating response...";
-            console.log("detect: " + detectedLanguage);
-            console.log("preferred: " + preferredLang);
 
             if (supportedLanguages.includes(detectedLanguage)) {
               // Translator is created only if the detected language is supported

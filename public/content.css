@@ -173,8 +173,10 @@ button {
 #clariff-close-btn.open {
   transform: rotate(180deg); /* Rotate chevron when open */
 }
+
 /* Hidden State Transition for Root */
 #clariff-root[hidden] {
-  transition: transform 300ms ease-in-out;
-  transform: translateY(90%);
+  transition: transform 300ms ease-in-out, width 300ms ease-in-out;
+  transform: translateY(93%);
+  width: 200px;
 }
