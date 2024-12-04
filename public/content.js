@@ -9,71 +9,106 @@ const addTextSelectionListener = () => {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect(); // Get the bounding rectangle of the selection
 
-      const analyzeButton = document.createElement("button");
-      analyzeButton.textContent = "Analyze";
-      analyzeButton.style.position = "absolute";
-      analyzeButton.style.top = `${rect.top + window.scrollY - 40}px`;
-      analyzeButton.style.left = `${rect.left + window.scrollX}px`; // Align with the selection
-      analyzeButton.style.zIndex = "9999";
-      analyzeButton.style.padding = "8px 16px";
-      analyzeButton.style.backgroundColor = "#007bff";
-      analyzeButton.style.color = "white";
-      analyzeButton.style.border = "none";
-      analyzeButton.style.borderRadius = "5px";
-      analyzeButton.style.cursor = "pointer";
-      analyzeButton.style.fontSize = "14px";
+      const summarizeButton = document.createElement("button");
+      summarizeButton.textContent = "Summarize";
+      summarizeButton.style.position = "absolute";
+      summarizeButton.style.top = `${rect.top + window.scrollY - 40}px`;
+      summarizeButton.style.left = `${rect.left + window.scrollX}px`; // Align with the selection
+      summarizeButton.style.zIndex = "9999";
+      summarizeButton.style.padding = "8px 16px";
+      summarizeButton.style.backgroundColor = "#007bff";
+      summarizeButton.style.color = "white";
+      summarizeButton.style.border = "none";
+      summarizeButton.style.borderRadius = "5px";
+      summarizeButton.style.cursor = "pointer";
+      summarizeButton.style.fontSize = "14px";
 
       // Add event listener to the "Analyze" button
-      analyzeButton.addEventListener("click", () => {
+      summarizeButton.addEventListener("click", () => {
+        cardContainer.hidden = false;
+
         (async () => {
           const canSummarize = await ai.summarizer.capabilities();
           let summarizer;
           if (canSummarize && canSummarize.available !== "no") {
             if (canSummarize.available === "readily") {
               // The summarizer can immediately be used.
-              summarizer = await ai.summarizer.create();
+              summarizer = await ai.summarizer.create({
+                format: "plain-text",
+              });
             } else {
               // The summarizer can be used after the model download.
-              summarizer = await ai.summarizer.create();
+              summarizer = await ai.summarizer.create({
+                format: "plain-text",
+              });
               summarizer.addEventListener("downloadprogress", (e) => {
                 console.log(e.loaded, e.total);
               });
               await summarizer.ready;
             }
           } else {
-            alert("total fail");
+            alert("Failed to load summarizer");
+            return;
+          }
+
+          // Detect language of the selected text
+          const canDetect = await translation.canDetect();
+          let detector;
+          if (canDetect !== "no") {
+            if (canDetect === "readily") {
+              // The language detector can immediately be used.
+              detector = await translation.createDetector();
+            } else {
+              // The language detector can be used after the model download.
+              detector = await translation.createDetector();
+              detector.addEventListener("downloadprogress", (e) => {
+                console.log(e.loaded, e.total);
+              });
+              await detector.ready;
+            }
+          } else {
+            alert("Failed to load language detector");
             return;
           }
 
           try {
             // Create the streaming div directly
-            const streamDiv = document.createElement("div");
-            streamDiv.id = "streaming-box";
-            streamDiv.style.position = "fixed";
-            streamDiv.style.bottom = "20px";
-            streamDiv.style.right = "20px";
-            streamDiv.style.width = "300px";
-            streamDiv.style.maxHeight = "200px";
-            streamDiv.style.overflowY = "auto";
-            streamDiv.style.padding = "10px";
-            streamDiv.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
-            streamDiv.style.color = "white";
-            streamDiv.style.borderRadius = "5px";
-            streamDiv.style.zIndex = "1000";
-            streamDiv.style.fontFamily = "Arial, sans-serif";
-            streamDiv.style.fontSize = "14px";
-            document.body.appendChild(streamDiv);
+            // COMMENTED OUT FOR NOW
+            // const streamDiv = document.createElement("div");
+            // streamDiv.id = "streaming-box";
+            // streamDiv.style.position = "fixed";
+            // streamDiv.style.bottom = "20px";
+            // streamDiv.style.right = "20px";
+            // streamDiv.style.width = "300px";
+            // streamDiv.style.maxHeight = "200px";
+            // streamDiv.style.overflowY = "auto";
+            // streamDiv.style.padding = "10px";
+            // streamDiv.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+            // streamDiv.style.color = "white";
+            // streamDiv.style.borderRadius = "5px";
+            // streamDiv.style.zIndex = "1000";
+            // streamDiv.style.fontFamily = "Arial, sans-serif";
+            // streamDiv.style.fontSize = "14px";
+            // document.body.appendChild(streamDiv);
 
-            // Initialize an empty string to track the last processed content
-            let lastContent = "";
+            const results = await detector.detect(selectedText);
+            const detectedLanguage = results[0].detectedLanguage;
+            outputFooter.textContent = `Language detected: ${detectedLanguage}`;
 
             // Start streaming the summary
             const stream = summarizer.summarizeStreaming(selectedText);
-            for await (const chunk of stream) {
-              // Add only the new part of the chunk
-              const newContent = chunk.replace(lastContent, "");
-              streamDiv.textContent += newContent;
-              lastContent = chunk; // Update the last processed content
+
+            output.textContent = "Generating response...";
+
+            for await (let chunk of stream) {
+              textOutput = chunk;
+
+              // Parse markdown list items beginning with - and *
+              chunk = chunk
+                .replace(/^[\*\-]{1}\s/g, "<li>")
+                .replace(/(\.[*]*\s)[\s]*[\*\-]{1}/g, "$1</li><li>");
+              output.innerHTML = chunk;
+              // streamDiv.innerHTML = chunk;
             }
           } catch (error) {
             console.error("Error summarizing text:", error);
@@ -85,45 +120,37 @@ const addTextSelectionListener = () => {
       });
 
       // Append the button to the body
-      document.body.appendChild(analyzeButton);
+      document.body.appendChild(summarizeButton);
 
       // Check if the button is outside the viewport
-      const buttonRect = analyzeButton.getBoundingClientRect();
+      const buttonRect = summarizeButton.getBoundingClientRect();
       const isOutOfView = buttonRect.top < 0;
 
       // Adjust position if it's out of view
       if (isOutOfView) {
-        analyzeButton.style.top = `${rect.bottom + window.scrollY + 10}px`;
+        summarizeButton.style.top = `${rect.bottom + window.scrollY + 10}px`;
       }
 
       // Remove the button if the selection changes (user clicks elsewhere)
       const removeButton = () => {
-        analyzeButton.remove();
+        summarizeButton.remove();
         document.removeEventListener("selectionchange", removeButton);
       };
       document.addEventListener("selectionchange", removeButton); // Event to remove the button when selection changes
+    } else {
+      output.textContent =
+        "Highlight text from the current website to rephrase";
     }
   });
 };
 
 addTextSelectionListener();
-// Container to hold card and minimized button
-const clariffContainer = document.createElement("div");
-clariffContainer.id = "clariff-container";
-document.body.appendChild(clariffContainer);
 
 // Card styling and structure
 const cardContainer = document.createElement("dialog");
 cardContainer.id = "clariff-root";
+cardContainer.hidden = true;
 document.body.appendChild(cardContainer);
-clariffContainer.appendChild(cardContainer);
-
-const popupButton = document.createElement("button");
-popupButton.id = "clariff-popup-btn";
-popupButton.addEventListener("click", () => {
-  cardContainer.hidden = false;
-});
-clariffContainer.appendChild(popupButton);
 
 // Title and close button
 const cardHeader = document.createElement("div");
@@ -133,6 +160,7 @@ const headerTitle = document.createElement("span");
 headerTitle.id = "clariff-title";
 headerTitle.innerText = "Clariff";
 cardHeader.appendChild(headerTitle);
+
 const closeButton = document.createElement("button");
 closeButton.id = "clariff-close-btn";
 
@@ -141,76 +169,118 @@ closeIcon.setAttribute("viewBox", "0 0 384 512");
 closeIcon.innerHTML =
   '<path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/>';
 closeButton.appendChild(closeIcon);
+
 closeButton.addEventListener("click", () => {
-  cardContainer.hidden = true;
+  cardContainer.hidden = !cardContainer.hidden;
 });
 cardHeader.appendChild(closeButton);
 
 cardContainer.appendChild(cardHeader);
 
 // Text area where summarizations are displayed
-const textArea = document.createElement("textarea");
-textArea.id = "clariff-textarea";
-textArea.readOnly = true;
-textArea.placeholder = "Highlight text from the current website to rephrase";
-cardContainer.appendChild(textArea);
+const outputContainer = document.createElement("div");
+outputContainer.id = "clariff-output-container";
+cardContainer.appendChild(outputContainer);
 
-const textAreaFooter = document.createElement("p");
-textAreaFooter.id = "clariff-language";
-textAreaFooter.textContent = "Language detected: ";
-cardContainer.appendChild(textAreaFooter);
+const output = document.createElement("output");
+output.id = "clariff-output";
+output.textContent = "Highlight text from the current website to rephrase";
+output.readOnly = true;
+output.ariaDescription = "Highlight text from the current website to rephrase";
+outputContainer.appendChild(output);
 
-const textAreaContainer = document.createElement("div");
-textAreaContainer.id = "clariff-textarea-container";
-textAreaContainer.appendChild(textArea);
-textAreaContainer.appendChild(textAreaFooter);
-cardContainer.appendChild(textAreaContainer);
+const outputFooter = document.createElement("p");
+outputFooter.id = "clariff-language";
+outputFooter.textContent = "Language detected: ";
+outputContainer.appendChild(outputFooter);
 
 const buttonGroup = document.createElement("div");
 buttonGroup.id = "clariff-btn-group";
 cardContainer.appendChild(buttonGroup);
 
-// Length option
-const lengthDropdown = document.createElement("select");
-lengthDropdown.id = "clariff-length-dropdown";
+// Choice option
+const choiceDropdown = document.createElement("select");
+choiceDropdown.id = "clariff-choice-dropdown";
+
+const optionLength = document.createElement("option");
+optionLength.value = "length";
+optionLength.innerText = "Length";
+choiceDropdown.appendChild(optionLength);
+
+const optionTone = document.createElement("option");
+optionTone.value = "tone";
+optionTone.innerText = "Tone";
+choiceDropdown.appendChild(optionTone);
+
+// Provide default option
+choiceDropdown.selectedIndex = 0;
+
+buttonGroup.appendChild(choiceDropdown);
+
+// Second dropdown (initially empty)
+const secondDropdown = document.createElement("select");
+secondDropdown.id = "clariff-second-dropdown";
+buttonGroup.appendChild(secondDropdown);
+
+// Set default values for rephrasing
+let rephraseLength = "as-is";
+let rephraseTone = "as-is";
+
+// Define optgroups for length and tone options
+const lengthOptGroup = document.createElement("optgroup");
+lengthOptGroup.label = "Length";
 
 const optionLengthAsIs = document.createElement("option");
 optionLengthAsIs.value = "as-is";
 optionLengthAsIs.innerText = "As is";
-lengthDropdown.appendChild(optionLengthAsIs);
+lengthOptGroup.appendChild(optionLengthAsIs);
 
 const optionShorten = document.createElement("option");
 optionShorten.value = "shorter";
-optionShorten.innerText = "Shorten";
-lengthDropdown.appendChild(optionShorten);
+optionShorten.innerText = "Shorter";
+lengthOptGroup.appendChild(optionShorten);
 
 const optionLengthen = document.createElement("option");
 optionLengthen.value = "longer";
-optionLengthen.innerText = "Lengthen";
-lengthDropdown.appendChild(optionLengthen);
+optionLengthen.innerText = "Longer";
+lengthOptGroup.appendChild(optionLengthen);
 
-buttonGroup.appendChild(lengthDropdown);
-
-// Tone option
-const toneDropdown = document.createElement("select");
-toneDropdown.id = "clariff-tone-dropdown";
+const toneOptGroup = document.createElement("optgroup");
+toneOptGroup.label = "Tone";
 
 const optionToneAsIs = document.createElement("option");
 optionToneAsIs.value = "as-is";
 optionToneAsIs.innerText = "As is";
-toneDropdown.appendChild(optionToneAsIs);
+toneOptGroup.appendChild(optionToneAsIs);
 
 const optionFormal = document.createElement("option");
 optionFormal.value = "more-formal";
 optionFormal.innerText = "Formal";
-toneDropdown.appendChild(optionFormal);
+toneOptGroup.appendChild(optionFormal);
 
 const optionCasual = document.createElement("option");
 optionCasual.value = "more-casual";
 optionCasual.innerText = "Casual";
-toneDropdown.appendChild(optionCasual);
+toneOptGroup.appendChild(optionCasual);
 
-buttonGroup.appendChild(toneDropdown);
+secondDropdown.replaceChildren(lengthOptGroup); // Set default options
+secondDropdown.selectedIndex = 0; // Set default value
+
+// Update second dropdown based on choice
+choiceDropdown.addEventListener("change", () => {
+  secondDropdown.replaceChildren(""); // Clear existing options
+
+  if (choiceDropdown.value === "length") {
+    // If user switches choice to length, set tone to "as-is"
+    rephraseTone = "as-is";
+    secondDropdown.replaceChildren(lengthOptGroup);
+  } else if (choiceDropdown.value === "tone") {
+    // If user switches choice to tone, set length to "as-is"
+    rephraseLength = "as-is";
+    secondDropdown.replaceChildren(toneOptGroup);
+  }
+  secondDropdown.selectedIndex = 0; // Set default value
+});
 
 const rephraseButton = document.createElement("button");
 rephraseButton.id = "clariff-rephrase";
@@ -218,34 +288,39 @@ rephraseButton.innerText = "Rephrase";
 buttonGroup.appendChild(rephraseButton);
 
 // Logic and event listening
-// TODO: Add analyze-btn as ID for analyzeButton on azzam branch
-// const analyzeButton = document.getElementById("analyze-btn");
 
-let selection;
-
-// This is a dummy listener for testing purposes
-document.addEventListener("mouseup", () => {
-  selection = window.getSelection().toString();
-});
+// This is modified whenever text is summarized or when text is rephrased
+let textOutput = "";
 
 rephraseButton.addEventListener("click", async () => {
-  console.log(selection);
-  const rephraseLength = lengthDropdown.value;
-  const rephraseTone = toneDropdown.value;
+  // If user selects to rephrase the length
+  console.log(textOutput);
+  if (choiceDropdown.selectedIndex === 0) {
+    rephraseLength = secondDropdown.value;
+  } else {
+    rephraseTone = secondDropdown.value;
+  }
 
   const rewriter = await ai.rewriter.create({
     tone: rephraseTone,
     length: rephraseLength,
     sharedContext:
-      "I need help explaining this in a different way, perhaps with additional context. Can you help me with that?",
-    format: "markdown",
+      "I need help explaining this in a more cheerful, hands-on manner",
+    format: "plain-text",
   });
-  console.log(rewriter);
 
-  const stream = rewriter.rewriteStreaming(selection);
+  output.textContent = "Generating response...";
 
-  for await (const chunk of stream) {
-    textArea.value = chunk;
+  const stream = rewriter.rewriteStreaming(textOutput);
+
+  for await (let chunk of stream) {
+    textOutput = chunk;
+
+    // Parse list items starting with either - or *
+    chunk = chunk
+      .replace(/^[\*\-]{1}\s/g, "<li>")
+      .replace(/(\.[*]*\s)[\s]*[\*\-]{1}/g, "$1</li><li>");
+    output.innerHTML = chunk;
   }
 
   rewriter.destroy();
