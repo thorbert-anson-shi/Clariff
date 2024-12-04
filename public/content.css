@@ -1,3 +1,4 @@
+/* Root Variables */
 :root {
   --primary-color: #007bff;
   --secondary-color: #6c757d;
@@ -12,6 +13,7 @@
   --btn-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
+/* Dark Mode Variables */
 @media (prefers-color-scheme: dark) {
   :root {
     --primary-color: #375a7f;
@@ -28,10 +30,12 @@
   }
 }
 
+/* Button Styles */
 button {
   cursor: pointer;
 }
 
+/* Clariff Root Container */
 #clariff-root {
   min-height: 0;
   min-width: 0;
@@ -40,9 +44,9 @@ button {
   height: fit-content;
   font-family: sans-serif;
   position: fixed;
-  left: auto;
   right: 2rem;
   bottom: 2rem;
+  left: auto;
   border: 3px solid var(--secondary-color);
   background-color: var(--background-color);
   border-radius: 1rem;
@@ -52,16 +56,17 @@ button {
   flex-direction: column;
   color: var(--text-color);
   z-index: 9999;
-  transition-duration: 300ms;
-  transition-timing-function: ease-in-out;
+  transition: transform 300ms ease-in-out;
 }
 
+/* Reset Margin and Padding for All Child Elements */
 #clariff-root * {
   margin-top: 2%;
   margin-bottom: 0;
   padding: 0;
 }
 
+/* Header Styling */
 #clariff-header,
 #clariff-header * {
   margin-top: 0;
@@ -70,20 +75,22 @@ button {
   align-items: center;
 }
 
+/* Title Styling */
 #clariff-title {
   font-size: 1.2rem;
   color: var(--text-color);
 }
 
+/* Output Container */
 #clariff-output-container {
   width: auto;
   flex-grow: 1;
   min-height: 150px;
-  min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
+/* Output Textarea */
 #clariff-output {
   width: auto;
   flex-grow: 1;
@@ -98,12 +105,14 @@ button {
   overflow-y: auto;
 }
 
+/* Button Group */
 #clariff-btn-group {
   display: flex;
   justify-content: space-evenly;
   flex-wrap: wrap;
 }
 
+/* Button Styles Inside Button Group */
 #clariff-btn-group * {
   margin-right: 0.5rem;
   padding: 0.25rem 0.5rem;
@@ -118,24 +127,34 @@ button {
   flex-grow: 1;
 }
 
+/* Hover Effect for Buttons */
 #clariff-btn-group *:hover {
   box-shadow: none;
   background-color: var(--secondary-hover);
 }
 
+/* Rephrase Button */
 #clariff-rephrase {
   background-color: var(--primary-color);
 }
 
+/* Hover Effect for Rephrase Button */
 #clariff-rephrase:hover {
   background-color: var(--primary-hover);
 }
 
+/* Language Section */
 #clariff-language {
   color: var(--text-color);
   font-size: 1rem;
 }
 
+#clariff-language-select {
+  color: var(--text-color);
+  font-size: 1rem;
+}
+
+/* Chevron Icon Rotation */
 #clariff-close-btn {
   border-radius: 50%;
   width: 1rem;
@@ -143,14 +162,19 @@ button {
   background-color: transparent;
   border: none;
   fill: var(--text-color);
+  transition: transform 0.3s ease;
 }
 
+/* Hover Effect for Close Button */
 #clariff-close-btn:hover {
   fill: var(--text-color-secondary);
 }
 
+#clariff-close-btn.open {
+  transform: rotate(180deg); /* Rotate chevron when open */
+}
+/* Hidden State Transition for Root */
 #clariff-root[hidden] {
-  transition-duration: 300ms;
-  transition-timing-function: ease-in-out;
+  transition: transform 300ms ease-in-out;
   transform: translateY(90%);
 }
